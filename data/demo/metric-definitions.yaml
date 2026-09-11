@@ -1,0 +1,28 @@
+metrics:
+  gmv:
+    name: GMV
+    description: Gross merchandise value for paid or completed orders.
+    sqlite:
+      table: orders
+      expression: "SUM(total_amount)"
+      filter: "status IN ('paid', 'completed')"
+    csv:
+      table: dataset
+      expression: "SUM(total_amount)"
+  order_amount:
+    name: Order Amount
+    sqlite:
+      table: orders
+      expression: "SUM(total_amount)"
+    csv:
+      table: dataset
+      expression: "SUM(total_amount)"
+  repeat_customer:
+    name: Repeat Customer
+    description: Customer with at least two completed orders in the selected period.
+  repeat_rate:
+    name: Repeat Rate
+    description: Repeat customers divided by ordering customers in the selected period.
+  payment_success_rate:
+    name: Payment Success Rate
+    description: Successful payments divided by all payments.
