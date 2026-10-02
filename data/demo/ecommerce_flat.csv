@@ -1,0 +1,25 @@
+order_id,customer_id,customer_name,email,city,order_date,status,channel,total_amount,payment_method,payment_status
+1001,1,Ada Lin,ada.lin@example.test,Shanghai,2025-01-20,paid,web,98.00,card,succeeded
+1002,4,Diana Sun,diana.sun@example.test,Hangzhou,2025-01-04,completed,mobile,665.00,wallet,succeeded
+1003,1,Ada Lin,ada.lin@example.test,Shanghai,2025-01-25,failed,store,267.00,bank_transfer,failed
+1004,4,Diana Sun,diana.sun@example.test,Hangzhou,2025-01-02,pending,web,227.00,card,pending
+1005,1,Ada Lin,ada.lin@example.test,Shanghai,2025-01-20,canceled,mobile,49.00,wallet,failed
+1006,4,Diana Sun,diana.sun@example.test,Hangzhou,2025-01-02,refunded,store,215.00,bank_transfer,succeeded
+1007,1,Ada Lin,ada.lin@example.test,Shanghai,2025-01-20,paid,web,49.00,card,succeeded
+1008,4,Diana Sun,diana.sun@example.test,Hangzhou,2025-01-23,completed,mobile,576.00,wallet,succeeded
+1009,1,Ada Lin,ada.lin@example.test,Shanghai,2025-01-12,failed,store,597.00,bank_transfer,failed
+1010,4,Diana Sun,diana.sun@example.test,Hangzhou,2025-01-04,pending,web,476.00,card,pending
+1011,1,Ada Lin,ada.lin@example.test,Shanghai,2025-01-16,canceled,mobile,147.00,wallet,failed
+1012,4,Diana Sun,diana.sun@example.test,Hangzhou,2025-01-03,refunded,store,515.00,bank_transfer,succeeded
+1013,1,Ada Lin,ada.lin@example.test,Shanghai,2025-01-06,paid,web,117.00,card,succeeded
+1014,4,Diana Sun,diana.sun@example.test,Hangzhou,2025-01-25,completed,mobile,306.00,wallet,succeeded
+1015,1,Ada Lin,ada.lin@example.test,Shanghai,2025-01-08,failed,store,89.00,bank_transfer,failed
+1016,4,Diana Sun,diana.sun@example.test,Hangzhou,2025-01-04,pending,web,306.00,card,pending
+1017,1,Ada Lin,ada.lin@example.test,Shanghai,2025-01-29,canceled,mobile,147.00,wallet,failed
+1018,4,Diana Sun,diana.sun@example.test,Hangzhou,2025-01-14,refunded,store,176.00,bank_transfer,succeeded
+1019,1,Ada Lin,ada.lin@example.test,Shanghai,2025-01-08,paid,web,49.00,card,succeeded
+1020,4,Diana Sun,diana.sun@example.test,Hangzhou,2025-01-05,completed,mobile,756.00,wallet,succeeded
+1021,1,Ada Lin,ada.lin@example.test,Shanghai,2025-01-21,failed,store,117.00,bank_transfer,failed
+1022,4,Diana Sun,diana.sun@example.test,Hangzhou,2025-01-11,pending,web,127.00,card,pending
+1023,1,Ada Lin,ada.lin@example.test,Shanghai,2025-01-19,canceled,mobile,318.00,wallet,failed
+1024,4,Diana Sun,diana.sun@example.test,Hangzhou,2025-01-24,refunded,store,358.00,bank_transfer,succeeded

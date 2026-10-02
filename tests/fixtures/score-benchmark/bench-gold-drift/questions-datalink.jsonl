@@ -1,0 +1,2 @@
+{"id": "q01", "difficulty": "easy", "category": "aggregate", "question": "平均评分是多少？请先用 explore_datalink 检索数据地图。", "gold_sql": "SELECT ROUND(AVG(rating), 1) AS avg_rating FROM reviews", "notes": "夹具"}
+{"id": "q02", "difficulty": "easy", "category": "aggregate", "question": "总销售额是多少？请先用 explore_datalink 检索数据地图。", "gold_sql": "SELECT ROUND(SUM(amount), 2) AS total_sales FROM order_items", "notes": "夹具；此文件与 expected 同源，不应被报"}

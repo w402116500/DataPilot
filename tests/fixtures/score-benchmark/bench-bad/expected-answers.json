@@ -1,0 +1,30 @@
+[
+  {
+    "id": "q01",
+    "columns": [
+      "avg_rating"
+    ],
+    "rows": [
+      [
+        4.2
+      ]
+    ],
+    "row_count": 2,
+    "gold_sql": "SELECT 4.2"
+  },
+  {
+    "id": "q02",
+    "columns": [
+      "city",
+      "sales"
+    ],
+    "rows": [
+      [
+        "佛山",
+        1.0
+      ]
+    ],
+    "row_count": 1,
+    "gold_sql": ""
+  }
+]

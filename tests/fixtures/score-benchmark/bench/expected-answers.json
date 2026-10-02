@@ -1,0 +1,74 @@
+[
+  {
+    "id": "q01",
+    "question": "平均评分是多少？",
+    "columns": [
+      "avg_rating"
+    ],
+    "rows": [
+      [
+        4.2
+      ]
+    ],
+    "row_count": 1,
+    "gold_sql": "SELECT ROUND(AVG(rating), 1) AS avg_rating FROM reviews"
+  },
+  {
+    "id": "q02",
+    "question": "消费前三的城市是哪些？",
+    "columns": [
+      "city",
+      "sales"
+    ],
+    "rows": [
+      [
+        "佛山",
+        3097093.59
+      ],
+      [
+        "南宁",
+        2942423.7
+      ],
+      [
+        "天津",
+        2858914.77
+      ]
+    ],
+    "row_count": 3,
+    "gold_sql": "SELECT city, ROUND(SUM(amount), 2) AS sales FROM orders GROUP BY city ORDER BY sales DESC LIMIT 3"
+  },
+  {
+    "id": "q03",
+    "question": "有多少顾客浏览未下单？",
+    "columns": [
+      "browse_only"
+    ],
+    "rows": [
+      [
+        612
+      ]
+    ],
+    "row_count": 1,
+    "gold_sql": "SELECT COUNT(DISTINCT customer_id) AS browse_only FROM events"
+  },
+  {
+    "id": "q04",
+    "question": "每月销售额是多少？",
+    "columns": [
+      "month",
+      "sales"
+    ],
+    "rows": [
+      [
+        "2026-01",
+        100.0
+      ],
+      [
+        "2026-02",
+        200.0
+      ]
+    ],
+    "row_count": 2,
+    "gold_sql": "SELECT month, SUM(sales) FROM t GROUP BY month"
+  }
+]

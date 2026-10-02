@@ -1,0 +1,2 @@
+{"id": "q01", "difficulty": "easy", "category": "aggregate", "question": "平均评分是多少？", "gold_sql": "SELECT ROUND(AVG(rating), 1) AS avg_rating FROM reviews", "notes": "夹具"}
+{"id": "q02", "difficulty": "easy", "category": "aggregate", "question": "总销售额是多少？", "gold_sql": "SELECT ROUND(SUM(line_amount), 2) AS total_sales FROM order_items", "notes": "夹具；gold_sql 是 expected 修正前的旧值，lint 必须报不一致"}

@@ -1,0 +1,676 @@
+[
+  {
+    "id": "q01",
+    "question": "平台一共有多少位顾客？",
+    "difficulty": "easy",
+    "category": "single_table",
+    "notes": "单表计数",
+    "gold_sql": "SELECT COUNT(*) AS customer_count FROM customers",
+    "columns": [
+      "customer_count"
+    ],
+    "rows": [
+      [
+        2400
+      ]
+    ],
+    "row_count": 1
+  },
+  {
+    "id": "q02",
+    "question": "一共有几个商品类目？请列出所有类目名称。",
+    "difficulty": "easy",
+    "category": "single_table",
+    "notes": "全量枚举",
+    "gold_sql": "SELECT category_name FROM categories ORDER BY category_id",
+    "columns": [
+      "category_name"
+    ],
+    "rows": [
+      [
+        "手机数码"
+      ],
+      [
+        "家用电器"
+      ],
+      [
+        "服饰鞋包"
+      ],
+      [
+        "美妆个护"
+      ],
+      [
+        "食品生鲜"
+      ],
+      [
+        "家居日用"
+      ],
+      [
+        "运动户外"
+      ],
+      [
+        "图书文娱"
+      ]
+    ],
+    "row_count": 8
+  },
+  {
+    "id": "q03",
+    "question": "顾客都是用哪些支付方式下单的？每种支付方式有多少笔订单？",
+    "difficulty": "easy",
+    "category": "single_table",
+    "notes": "单表 GROUP BY，4 组",
+    "gold_sql": "SELECT payment_method, COUNT(*) AS order_count FROM orders GROUP BY payment_method",
+    "columns": [
+      "payment_method",
+      "order_count"
+    ],
+    "rows": [
+      [
+        "支付宝",
+        10024
+      ],
+      [
+        "微信支付",
+        7619
+      ],
+      [
+        "云闪付",
+        1568
+      ],
+      [
+        "货到付款",
+        789
+      ]
+    ],
+    "row_count": 4
+  },
+  {
+    "id": "q04",
+    "question": "各种订单状态分别有多少笔订单？",
+    "difficulty": "easy",
+    "category": "single_table",
+    "notes": "单表 GROUP BY，5 组",
+    "gold_sql": "SELECT status, COUNT(*) AS order_count FROM orders GROUP BY status",
+    "columns": [
+      "status",
+      "order_count"
+    ],
+    "rows": [
+      [
+        "已完成",
+        12008
+      ],
+      [
+        "已发货",
+        2922
+      ],
+      [
+        "已取消",
+        2048
+      ],
+      [
+        "待发货",
+        2032
+      ],
+      [
+        "退款中",
+        990
+      ]
+    ],
+    "row_count": 5
+  },
+  {
+    "id": "q05",
+    "question": "顾客分布在全国哪些大区？每个大区有多少位顾客？",
+    "difficulty": "easy",
+    "category": "single_table",
+    "notes": "单表 GROUP BY，8 组",
+    "gold_sql": "SELECT region, COUNT(*) AS customer_count FROM customers GROUP BY region",
+    "columns": [
+      "region",
+      "customer_count"
+    ],
+    "rows": [
+      [
+        "西北",
+        126
+      ],
+      [
+        "华东",
+        653
+      ],
+      [
+        "华北",
+        439
+      ],
+      [
+        "华南",
+        561
+      ],
+      [
+        "华中",
+        255
+      ],
+      [
+        "东北",
+        81
+      ],
+      [
+        "港澳台",
+        70
+      ],
+      [
+        "西南",
+        215
+      ]
+    ],
+    "row_count": 8
+  },
+  {
+    "id": "q06",
+    "question": "平台上销量最高的前 5 个商品是什么？按售出件数排序。",
+    "difficulty": "medium",
+    "category": "join",
+    "notes": "两表连接 + 聚合排名；并列名次用 product_id 决胜，保证结果确定",
+    "gold_sql": "SELECT p.product_name, SUM(oi.quantity) AS total_qty FROM products p JOIN order_items oi ON p.product_id = oi.product_id GROUP BY p.product_id, p.product_name ORDER BY total_qty DESC, p.product_id LIMIT 5",
+    "columns": [
+      "product_name",
+      "total_qty"
+    ],
+    "rows": [
+      [
+        "小米 平板电脑 尊享版",
+        192.0
+      ],
+      [
+        "361度 瑜伽垫 礼盒装",
+        189.0
+      ],
+      [
+        "人文社 长篇小说 礼盒装",
+        189.0
+      ],
+      [
+        "波司登 羽绒服 轻盈版",
+        188.0
+      ],
+      [
+        "小天鹅 滚筒洗衣机 轻盈版",
+        184.0
+      ]
+    ],
+    "row_count": 5
+  },
+  {
+    "id": "q07",
+    "question": "平台的总销售额（所有订单明细的成交金额之和）是多少？",
+    "difficulty": "medium",
+    "category": "aggregate",
+    "notes": "全局聚合",
+    "gold_sql": "SELECT ROUND(SUM(line_amount), 2) AS total_sales FROM order_items",
+    "columns": [
+      "total_sales"
+    ],
+    "rows": [
+      [
+        64146731.07
+      ]
+    ],
+    "row_count": 1
+  },
+  {
+    "id": "q08",
+    "question": "已取消的订单一共涉及多少金额？",
+    "difficulty": "medium",
+    "category": "aggregate",
+    "notes": "过滤 + 连接聚合；答案应明显小于总销售额",
+    "gold_sql": "SELECT ROUND(SUM(oi.line_amount), 2) AS canceled_amount FROM orders o JOIN order_items oi ON o.order_id = oi.order_id WHERE o.status = '已取消'",
+    "columns": [
+      "canceled_amount"
+    ],
+    "rows": [
+      [
+        6652624.62
+      ]
+    ],
+    "row_count": 1
+  },
+  {
+    "id": "q09",
+    "question": "每个商品类目的销售额是多少？按销售额从高到低排列。",
+    "difficulty": "medium",
+    "category": "join",
+    "notes": "三表连接 + 分组聚合，8 组",
+    "gold_sql": "SELECT c.category_name, ROUND(SUM(oi.line_amount), 2) AS category_sales FROM categories c JOIN products p ON c.category_id = p.category_id JOIN order_items oi ON p.product_id = oi.product_id GROUP BY c.category_id, c.category_name ORDER BY category_sales DESC, c.category_id",
+    "columns": [
+      "category_name",
+      "category_sales"
+    ],
+    "rows": [
+      [
+        "手机数码",
+        31669635.85
+      ],
+      [
+        "家用电器",
+        18178237.3
+      ],
+      [
+        "运动户外",
+        5738758.05
+      ],
+      [
+        "服饰鞋包",
+        4519753.62
+      ],
+      [
+        "美妆个护",
+        1625317.02
+      ],
+      [
+        "食品生鲜",
+        904781.41
+      ],
+      [
+        "家居日用",
+        877047.39
+      ],
+      [
+        "图书文娱",
+        633200.43
+      ]
+    ],
+    "row_count": 8
+  },
+  {
+    "id": "q10",
+    "question": "每个大区的顾客贡献了多少销售额？",
+    "difficulty": "medium",
+    "category": "join",
+    "notes": "三表连接 + 分组聚合，8 组；考验多跳外键",
+    "gold_sql": "SELECT cu.region, ROUND(SUM(oi.line_amount), 2) AS region_sales FROM customers cu JOIN orders o ON cu.customer_id = o.customer_id JOIN order_items oi ON o.order_id = oi.order_id GROUP BY cu.region ORDER BY region_sales DESC, cu.region",
+    "columns": [
+      "region",
+      "region_sales"
+    ],
+    "rows": [
+      [
+        "华东",
+        17672948.36
+      ],
+      [
+        "华南",
+        15055554.5
+      ],
+      [
+        "华北",
+        11757191.85
+      ],
+      [
+        "华中",
+        6792841.93
+      ],
+      [
+        "西南",
+        5257263.63
+      ],
+      [
+        "西北",
+        3673890.61
+      ],
+      [
+        "东北",
+        2053190.22
+      ],
+      [
+        "港澳台",
+        1883849.97
+      ]
+    ],
+    "row_count": 8
+  },
+  {
+    "id": "q11",
+    "question": "各大区的平均订单金额（每笔订单的明细合计）是多少？",
+    "difficulty": "medium",
+    "category": "join",
+    "notes": "先按订单聚合再按大区平均，两层聚合",
+    "gold_sql": "SELECT region, ROUND(AVG(order_total), 2) AS avg_order_value FROM (SELECT cu.region AS region, o.order_id AS order_id, SUM(oi.line_amount) AS order_total FROM customers cu JOIN orders o ON cu.customer_id = o.customer_id JOIN order_items oi ON o.order_id = oi.order_id GROUP BY cu.region, o.order_id) t GROUP BY region ORDER BY avg_order_value DESC, region",
+    "columns": [
+      "region",
+      "avg_order_value"
+    ],
+    "rows": [
+      [
+        "西北",
+        3358.22
+      ],
+      [
+        "华东",
+        3244.53
+      ],
+      [
+        "港澳台",
+        3231.3
+      ],
+      [
+        "华北",
+        3214.1
+      ],
+      [
+        "华中",
+        3192.12
+      ],
+      [
+        "华南",
+        3182.99
+      ],
+      [
+        "东北",
+        3110.89
+      ],
+      [
+        "西南",
+        3092.51
+      ]
+    ],
+    "row_count": 8
+  },
+  {
+    "id": "q12",
+    "question": "哪些城市的顾客消费总金额排名前三？给出城市和消费金额。",
+    "difficulty": "medium",
+    "category": "join",
+    "notes": "城市粒度更细（40+ 城市），分组数超 12，考验 LIMIT/排序语义",
+    "gold_sql": "SELECT cu.city, ROUND(SUM(oi.line_amount), 2) AS city_sales FROM customers cu JOIN orders o ON cu.customer_id = o.customer_id JOIN order_items oi ON o.order_id = oi.order_id GROUP BY cu.city ORDER BY city_sales DESC, cu.city LIMIT 3",
+    "columns": [
+      "city",
+      "city_sales"
+    ],
+    "rows": [
+      [
+        "佛山",
+        3097093.59
+      ],
+      [
+        "南宁",
+        2942432.7
+      ],
+      [
+        "天津",
+        2858914.77
+      ]
+    ],
+    "row_count": 3
+  },
+  {
+    "id": "q13",
+    "question": "每个店铺的评分是多少？评分最高的三家店铺是哪几家？",
+    "difficulty": "medium",
+    "category": "join",
+    "notes": "单表排序取前 N；rating 是 DECIMAL，可能有并列，shop_id 决胜",
+    "gold_sql": "SELECT shop_name, rating FROM shops ORDER BY rating DESC, shop_id LIMIT 3",
+    "columns": [
+      "shop_name",
+      "rating"
+    ],
+    "rows": [
+      [
+        "小猫优品折扣店",
+        4.9
+      ],
+      [
+        "山茶严选生活馆",
+        4.9
+      ],
+      [
+        "柠檬严选生活馆",
+        4.9
+      ]
+    ],
+    "row_count": 3
+  },
+  {
+    "id": "q14",
+    "question": "2026 年每个月的销售额是多少？按月份顺序列出。",
+    "difficulty": "medium",
+    "category": "time_series",
+    "notes": "时间序列分组，9 组（1-9 月）；DataPilot 折线图场景",
+    "gold_sql": "SELECT DATE_FORMAT(o.order_ts, '%Y-%m') AS month, ROUND(SUM(oi.line_amount), 2) AS monthly_sales FROM orders o JOIN order_items oi ON o.order_id = oi.order_id WHERE o.order_ts >= '2026-01-01' GROUP BY month ORDER BY month",
+    "columns": [
+      "month",
+      "monthly_sales"
+    ],
+    "rows": [
+      [
+        "2026-01",
+        3015930.14
+      ],
+      [
+        "2026-02",
+        2814631.11
+      ],
+      [
+        "2026-03",
+        3743974.35
+      ],
+      [
+        "2026-04",
+        3118432.71
+      ],
+      [
+        "2026-05",
+        3616308.14
+      ],
+      [
+        "2026-06",
+        3229034.46
+      ],
+      [
+        "2026-07",
+        4153151.57
+      ],
+      [
+        "2026-08",
+        3711958.95
+      ],
+      [
+        "2026-09",
+        4057201.41
+      ]
+    ],
+    "row_count": 9
+  },
+  {
+    "id": "q15",
+    "question": "对比 2025 年和 2026 年同期的月度销售额（只看 1-8 月），业务是在增长吗？",
+    "difficulty": "medium",
+    "category": "time_series",
+    "notes": "20 组（2025-01..2025-08, 2026-01..2026-08）；生成器埋了月度权重 1.0→1.8 的增长趋势，答案应为“是”",
+    "gold_sql": "SELECT DATE_FORMAT(o.order_ts, '%Y-%m') AS month, ROUND(SUM(oi.line_amount), 2) AS monthly_sales FROM orders o JOIN order_items oi ON o.order_id = oi.order_id WHERE o.order_ts < '2026-09-01' AND MONTH(o.order_ts) BETWEEN 1 AND 8 GROUP BY month ORDER BY month",
+    "columns": [
+      "month",
+      "monthly_sales"
+    ],
+    "rows": [
+      [
+        "2025-01",
+        2232397.44
+      ],
+      [
+        "2025-02",
+        2081614.68
+      ],
+      [
+        "2025-03",
+        2432926.35
+      ],
+      [
+        "2025-04",
+        2234294.19
+      ],
+      [
+        "2025-05",
+        3023674.88
+      ],
+      [
+        "2025-06",
+        2477463.72
+      ],
+      [
+        "2025-07",
+        3021577.58
+      ],
+      [
+        "2025-08",
+        2598128.94
+      ],
+      [
+        "2026-01",
+        3015930.14
+      ],
+      [
+        "2026-02",
+        2814631.11
+      ],
+      [
+        "2026-03",
+        3743974.35
+      ],
+      [
+        "2026-04",
+        3118432.71
+      ],
+      [
+        "2026-05",
+        3616308.14
+      ],
+      [
+        "2026-06",
+        3229034.46
+      ],
+      [
+        "2026-07",
+        4153151.57
+      ],
+      [
+        "2026-08",
+        3711958.95
+      ]
+    ],
+    "row_count": 16
+  },
+  {
+    "id": "q16",
+    "question": "钻石会员的人均消费金额比普通会员高多少？",
+    "difficulty": "hard",
+    "category": "join",
+    "notes": "对比 + 人均口径（金额/去重人数，不是金额/订单数）；陷阱：除数用 COUNT(DISTINCT customer_id)",
+    "gold_sql": "SELECT member_tier, ROUND(SUM(oi.line_amount) / COUNT(DISTINCT o.customer_id), 2) AS avg_spend_per_customer FROM customers cu JOIN orders o ON cu.customer_id = o.customer_id JOIN order_items oi ON o.order_id = oi.order_id WHERE cu.member_tier IN ('钻石会员', '普通会员') GROUP BY member_tier",
+    "columns": [
+      "member_tier",
+      "avg_spend_per_customer"
+    ],
+    "rows": [
+      [
+        "普通会员",
+        26425.02
+      ],
+      [
+        "钻石会员",
+        26190.68
+      ]
+    ],
+    "row_count": 2
+  },
+  {
+    "id": "q17",
+    "question": "各会员等级的平均评分（顾客收到的好评程度）是多少？",
+    "difficulty": "hard",
+    "category": "join",
+    "notes": "会员等级与评分无因果关系，答案应接近随机（约 4.2±0.1）；考表达 vs 事实区分",
+    "gold_sql": "SELECT cu.member_tier, ROUND(AVG(r.rating), 2) AS avg_rating FROM customers cu JOIN orders o ON cu.customer_id = o.customer_id JOIN reviews r ON o.order_id = r.order_id GROUP BY cu.member_tier ORDER BY avg_rating DESC, cu.member_tier",
+    "columns": [
+      "member_tier",
+      "avg_rating"
+    ],
+    "rows": [
+      [
+        "钻石会员",
+        4.2
+      ],
+      [
+        "金卡会员",
+        4.18
+      ],
+      [
+        "银卡会员",
+        4.14
+      ],
+      [
+        "普通会员",
+        4.12
+      ]
+    ],
+    "row_count": 4
+  },
+  {
+    "id": "q18",
+    "question": "上海有哪些店铺？",
+    "difficulty": "hard",
+    "category": "trap",
+    "notes": "陷阱题：问的是 shops.city 不是 customers.city；两个表都有 city 列但语义不同，只有 shops 里的 4 家左右",
+    "gold_sql": "SELECT shop_name FROM shops WHERE city = '上海'",
+    "columns": [
+      "shop_name"
+    ],
+    "rows": [
+      [
+        "华为官方旗舰店"
+      ],
+      [
+        "汤圆严选生活馆"
+      ]
+    ],
+    "row_count": 2
+  },
+  {
+    "id": "q19",
+    "question": "顾客最常购买哪个类目的商品（按件数）？该类目占总销量的比例是多少？",
+    "difficulty": "hard",
+    "category": "trap",
+    "notes": "占比口径：类目件数 / 全部件数；子查询分母",
+    "gold_sql": "SELECT c.category_name, SUM(oi.quantity) AS total_qty, ROUND(SUM(oi.quantity) * 100.0 / (SELECT SUM(quantity) FROM order_items), 2) AS pct_of_total FROM categories c JOIN products p ON c.category_id = p.category_id JOIN order_items oi ON p.product_id = oi.product_id GROUP BY c.category_id, c.category_name ORDER BY total_qty DESC LIMIT 1",
+    "columns": [
+      "category_name",
+      "total_qty",
+      "pct_of_total"
+    ],
+    "rows": [
+      [
+        "手机数码",
+        6157.0,
+        12.88
+      ]
+    ],
+    "row_count": 1
+  },
+  {
+    "id": "q20",
+    "question": "2026 年 9 月有多少顾客浏览过商品但最终没有下单？",
+    "difficulty": "hard",
+    "category": "trap",
+    "notes": "反连接陷阱：events 与 orders 无外键直接关联，需按 customer_id 反查；答案非零",
+    "gold_sql": "SELECT COUNT(DISTINCT e.customer_id) AS browse_only FROM events e WHERE e.event_type = '浏览' AND e.event_ts >= '2026-09-01' AND e.customer_id NOT IN (SELECT o.customer_id FROM orders o WHERE o.order_ts >= '2026-09-01')",
+    "columns": [
+      "browse_only"
+    ],
+    "rows": [
+      [
+        612
+      ]
+    ],
+    "row_count": 1
+  }
+]

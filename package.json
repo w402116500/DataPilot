@@ -1,0 +1,38 @@
+{
+  "name": "datapilot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --config apps/web/vite.config.ts",
+    "build": "vue-tsc -p apps/web/tsconfig.app.json --noEmit && vite build --config apps/web/vite.config.ts",
+    "typecheck": "vue-tsc -p apps/web/tsconfig.app.json --noEmit",
+    "lint": "vue-tsc -p apps/web/tsconfig.app.json --noEmit",
+    "test": "vitest run --config apps/web/vite.config.ts"
+  },
+  "dependencies": {
+    "@lucide/vue": "^1.31.0",
+    "@vueuse/core": "^14.4.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "echarts": "^6.1.0",
+    "markstream-vue": "^2.0.0",
+    "pinia": "^2.2.2",
+    "reka-ui": "^2.10.3",
+    "tailwind-merge": "^3.6.0",
+    "vue": "^3.5.0",
+    "vue-router": "^4.4.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/web-bluetooth": "^0.0.21",
+    "@vitejs/plugin-vue": "^6.0.8",
+    "jsdom": "^24.1.1",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5.5.4",
+    "vite": "^8.2.1",
+    "vitest": "^4.1.10",
+    "vue-component-type-helpers": "^3.3.9",
+    "vue-tsc": "^2.0.29"
+  }
+}

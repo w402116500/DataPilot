@@ -1,0 +1,30 @@
+[
+  {
+    "id": "q01",
+    "question": "平均评分是多少？",
+    "columns": [
+      "avg_rating"
+    ],
+    "rows": [
+      [
+        4.2
+      ]
+    ],
+    "row_count": 1,
+    "gold_sql": "SELECT ROUND(AVG(rating), 1) AS avg_rating FROM reviews"
+  },
+  {
+    "id": "q02",
+    "question": "总销售额是多少？",
+    "columns": [
+      "total_sales"
+    ],
+    "rows": [
+      [
+        100.0
+      ]
+    ],
+    "row_count": 1,
+    "gold_sql": "SELECT ROUND(SUM(amount), 2) AS total_sales FROM order_items"
+  }
+]

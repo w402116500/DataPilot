@@ -1,0 +1,138 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1210" viewBox="0 0 1200 1210" role="img" aria-labelledby="architecture-title architecture-desc">
+  <title id="architecture-title">DataPilot 系统架构</title>
+  <desc id="architecture-desc">Vue 工作台通过 HTTP 和 SSE 连接主后端。FastAPI 应用服务和 Run Runtime 管理会话、快照、状态、事件及取消收尾；Agent Runtime 调用配置的模型并按需执行工具。SQL 通过 Data Gateway 只读访问 CSV、SQLite 或 MySQL，Python 在 Run 专属无网络 Docker 沙盒中读取本轮输入快照。独立的可选 DataLink 经 REST 管理和 MCP 检索，并保存独立 SQLite 图谱。运行记录、SQL 审计和产物索引保存到主后端 Metadata，产物内容保存为文件。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="strokeWidth">
+      <path d="M0 0L8 4L0 8Z" fill="#52677d"/>
+    </marker>
+    <marker id="semantic-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+      <path d="M0 0L8 4L0 8Z" fill="#5b8b83"/>
+    </marker>
+    <style>
+      text { font-family: Arial, "Microsoft YaHei", sans-serif; fill: #25394f; }
+      .title { font-size: 32px; font-weight: 700; }
+      .subtitle { font-size: 20px; fill: #66788b; }
+      .group-title { font-size: 22px; font-weight: 700; }
+      .node-title { font-size: 23px; font-weight: 700; }
+      .node-title-small { font-size: 21px; font-weight: 700; }
+      .body { font-size: 20px; fill: #52677d; }
+      .small { font-size: 18px; fill: #52677d; }
+      .label { font-size: 18px; font-weight: 600; fill: #52677d; }
+      .group { fill: #f0f5fa; stroke: #c5d3e0; stroke-width: 1.5; }
+      .tools { fill: #f7f8fb; stroke: #d4dbe5; stroke-width: 1.5; }
+      .semantic-group { fill: #edf7f3; stroke: #b4d2c7; stroke-width: 1.5; }
+      .node { fill: #fff; stroke: #9db3c9; stroke-width: 1.7; }
+      .agent { fill: #f6f3ff; stroke: #baa9d6; stroke-width: 1.7; }
+      .gateway { fill: #fffcf4; stroke: #d0bc8d; stroke-width: 1.7; }
+      .sandbox { fill: #f0f8fa; stroke: #9cc5cb; stroke-width: 1.7; }
+      .semantic-node { fill: #fff; stroke: #8ab3a4; stroke-width: 1.7; }
+      .flow { fill: none; stroke: #52677d; stroke-width: 2.2; stroke-linejoin: round; marker-end: url(#arrow); }
+      .duplex { fill: none; stroke: #52677d; stroke-width: 2.2; marker-start: url(#arrow); marker-end: url(#arrow); }
+      .semantic-flow { fill: none; stroke: #5b8b83; stroke-width: 2.2; stroke-dasharray: 7 6; stroke-linejoin: round; marker-end: url(#semantic-arrow); }
+    </style>
+  </defs>
+
+  <rect width="1200" height="1210" fill="#fff"/>
+  <text class="title" x="40" y="43">DataPilot 系统架构</text>
+  <text class="subtitle" x="40" y="73">自然语言分析 · 受控工具执行 · 证据与运行记录</text>
+
+  <rect class="group" x="40" y="100" width="830" height="100" rx="14"/>
+  <rect class="group" x="40" y="280" width="830" height="220" rx="14"/>
+  <rect class="tools" x="40" y="595" width="830" height="390" rx="14"/>
+  <rect class="semantic-group" x="920" y="595" width="260" height="390" rx="14"/>
+  <rect class="group" x="40" y="1050" width="830" height="145" rx="14"/>
+
+  <path class="duplex" d="M450 200V274"/>
+  <text class="label" x="469" y="245">HTTP 请求 / SSE 事件</text>
+  <path class="flow" d="M415 395H479"/>
+  <text class="label" x="428" y="378">启动</text>
+  <path class="flow" d="M850 370H914"/>
+  <text class="label" x="863" y="352">模型</text>
+
+  <path class="flow" d="M640 465V550H235V674"/>
+  <text class="label" x="250" y="580">只读 SQL</text>
+  <path class="flow" d="M750 465V674"/>
+  <text class="label" x="767" y="580">Python</text>
+  <path class="semantic-flow" d="M850 430H900V745H934"/>
+  <text class="label" x="912" y="569">MCP 检索</text>
+  <path class="semantic-flow" d="M870 310H1190V725H1166"/>
+  <text class="label" x="985" y="298">REST 管理</text>
+  <path class="flow" d="M1080 595V471"/>
+  <text class="label" x="1095" y="554">建图模型</text>
+
+  <path class="flow" d="M235 820V874"/>
+  <text class="label" x="250" y="852">只读访问</text>
+  <path class="flow" d="M665 820V874"/>
+  <text class="label" x="680" y="852">系统登记</text>
+  <path class="flow" d="M1050 820V874"/>
+  <text class="label" x="1064" y="852">持久化</text>
+  <path class="flow" d="M40 450H22V1030H340V1089"/>
+  <text class="label" x="150" y="1023">运行记录</text>
+  <path class="flow" d="M665 950V1089"/>
+  <text class="label" x="680" y="1023">文件内容</text>
+
+  <text class="node-title" x="64" y="141">Vue 工作台</text>
+  <text class="body" x="64" y="174">自然语言提问 / 多轮追问 · 表格、图表与报告 · 正文引用与运行检查台</text>
+
+  <text class="group-title" x="60" y="310">主后端</text>
+  <rect class="node" x="60" y="335" width="355" height="130" rx="10"/>
+  <text class="node-title-small" x="80" y="368">FastAPI / Run Runtime</text>
+  <text class="body" x="80" y="400">会话 · 数据源 · 模型配置</text>
+  <text class="body" x="80" y="430">Run 快照 · 状态 · 事件 · 取消</text>
+  <text class="small" x="80" y="455">事件持久化后再推送</text>
+
+  <rect class="agent" x="485" y="335" width="365" height="130" rx="10"/>
+  <text class="node-title" x="505" y="368">Agent Runtime</text>
+  <text class="body" x="505" y="400">LangChain / LangGraph</text>
+  <text class="body" x="505" y="430">动态分析 · 串行工具循环</text>
+  <text class="small" x="505" y="455">材料准入 · 引用回答</text>
+
+  <rect class="node" x="920" y="335" width="260" height="130" rx="10"/>
+  <text class="node-title-small" x="940" y="368">配置的模型服务</text>
+  <text class="small" x="940" y="400">OpenAI-compatible API</text>
+  <text class="body" x="940" y="430">主分析模型 / 建图模型</text>
+
+  <text class="group-title" x="60" y="628">数据与受控执行</text>
+  <rect class="gateway" x="60" y="680" width="355" height="140" rx="10"/>
+  <text class="node-title-small" x="80" y="714">Data Gateway / SQL Guard</text>
+  <text class="body" x="80" y="749">Schema · 只读 · 白名单</text>
+  <text class="body" x="80" y="781">字段遮蔽 · 结果限制 · SQL 审计</text>
+  <text class="small" x="80" y="806">查询表格由 Gateway 生成</text>
+
+  <rect class="sandbox" x="485" y="680" width="365" height="140" rx="10"/>
+  <text class="node-title-small" x="505" y="714">Run 专属 Python 沙盒</text>
+  <text class="body" x="505" y="749">无网络 Docker</text>
+  <text class="body" x="505" y="781">读取本轮只读输入快照</text>
+  <text class="small" x="505" y="806">计算 · 绘图 · 报告输出</text>
+
+  <rect class="node" x="60" y="880" width="355" height="70" rx="10"/>
+  <text class="node-title-small" x="80" y="910">CSV / SQLite / MySQL</text>
+  <text class="small" x="80" y="937">快照或受控只读连接</text>
+  <rect class="node" x="485" y="880" width="365" height="70" rx="10"/>
+  <text class="node-title-small" x="505" y="910">结果产出与登记</text>
+  <text class="small" x="505" y="937">图表 / Markdown / 文件 · 安全检查</text>
+
+  <text class="group-title" x="940" y="628">DataLink · 可选</text>
+  <rect class="semantic-node" x="940" y="680" width="220" height="140" rx="10"/>
+  <text class="node-title-small" x="960" y="714">独立语义服务</text>
+  <text class="small" x="960" y="749">实体 · 属性 · 字段映射</text>
+  <text class="body" x="960" y="781">关系 / Join 依据</text>
+  <text class="small" x="960" y="806">人工修订 · 版本发布</text>
+  <rect class="semantic-node" x="940" y="880" width="220" height="70" rx="10"/>
+  <text class="node-title-small" x="960" y="910">SQLite 语义图谱</text>
+  <text class="small" x="960" y="937">独立存储 · 固定版本</text>
+
+  <text class="group-title" x="60" y="1080">运行与产物留存</text>
+  <rect class="node" x="60" y="1095" width="355" height="80" rx="10"/>
+  <text class="node-title-small" x="80" y="1127">Metadata SQLite</text>
+  <text class="small" x="80" y="1155">Run / 事件 / SQL 审计 / 产物索引</text>
+  <rect class="node" x="485" y="1095" width="365" height="80" rx="10"/>
+  <text class="node-title-small" x="505" y="1127">Artifact 文件</text>
+  <text class="small" x="505" y="1155">表格 / 图表 / 报告 / 下载文件</text>
+
+  <path d="M940 1080H982" fill="none" stroke="#52677d" stroke-width="2.2"/>
+  <text class="small" x="995" y="1086">执行与存储</text>
+  <path d="M940 1116H982" fill="none" stroke="#5b8b83" stroke-width="2.2" stroke-dasharray="7 6"/>
+  <text class="small" x="995" y="1122">REST / MCP</text>
+  <text class="small" x="940" y="1168">DataLink 图谱与 Metadata 独立</text>
+</svg>

@@ -1,0 +1,2 @@
+{"id": "q01", "difficulty": "easy", "category": "aggregate", "question": "平均评分是多少？", "gold_sql": "SELECT ROUND(AVG(rating), 1) AS avg_rating FROM reviews", "notes": "夹具"}
+{"id": "q02", "difficulty": "medium", "category": "join", "question": "消费前三的城市是哪些？", "gold_sql": "SELECT city, ROUND(SUM(amount), 2) AS sales FROM orders GROUP BY city ORDER BY sales DESC LIMIT 3", "notes": "夹具"}
