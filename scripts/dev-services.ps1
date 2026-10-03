@@ -300,7 +300,9 @@ function Start-ManagedServices {
         '-m', 'uvicorn', 'server.main:app', '--app-dir', $datalinkPythonPath, '--host', '127.0.0.1', '--port', "$DataLinkPort"
     ) $DataLinkPort @{
         DATALINK_SERVICE_TOKEN = $datalinkServiceToken
-        PYTHONPATH = $datalinkPythonPath
+        # dev-python 的 sitecustomize 禁用 Windows WMI 查询；SQLAlchemy 导入
+        # platform.machine() 在 WMI 服务异常的机器上会无限阻塞，缺它则启动挂死。
+        PYTHONPATH = "$datalinkPythonPath;$devPythonPath"
     }
     try {
         $datalink = Wait-ManagedProcess $datalinkLaunch 'datalink'
