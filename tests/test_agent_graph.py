@@ -6,7 +6,11 @@ from typing import cast
 
 import pytest
 from agent_runtime.analysis_planning import MaterializedAnalysisPlan
-from agent_runtime.answer_materials import admitted_query_attempts, available_chart_sources
+from agent_runtime.answer_materials import (
+    admitted_query_attempts,
+    available_chart_sources,
+    build_chart_spec,
+)
 from agent_runtime.contracts import (
     AgentArtifactType,
     AgentErrorCode,
@@ -78,6 +82,7 @@ from agent_runtime.graph import (
 )
 from agent_runtime.runtime_limits import AgentRuntimeLimits
 from agent_runtime.token_estimate import estimate_message_tokens, estimate_text_tokens
+from contracts.answer_materials import ChartIntent
 from contracts.datalink import (
     DataLinkColumnProfileRead,
     DataLinkEdgeEvidenceRead,
@@ -2338,10 +2343,15 @@ async def test_python_requires_reported_evidence_before_entering_sandbox() -> No
                         "args": {
                             "script": "print('should not run')",
                             "output_paths": ["charts/result.png"],
-                            "chart_descriptions": [{
-                                "relative_path": "charts/result.png", "title": "图表",
-                                "description": "统计总额", "main_finding": "总额为 42",
-                                "source_refs": ["audit_42", "table_42"]}],
+                            "chart_descriptions": [
+                                {
+                                    "relative_path": "charts/result.png",
+                                    "title": "图表",
+                                    "description": "统计总额",
+                                    "main_finding": "总额为 42",
+                                    "source_refs": ["audit_42", "table_42"],
+                                }
+                            ],
                             "purpose": "生成图表",
                         },
                         "type": "tool_call",
@@ -2361,10 +2371,15 @@ async def test_python_requires_reported_evidence_before_entering_sandbox() -> No
                         "args": {
                             "script": "print('should not run')",
                             "output_paths": ["charts/result.png"],
-                            "chart_descriptions": [{
-                                "relative_path": "charts/result.png", "title": "图表",
-                                "description": "统计总额", "main_finding": "总额为 42",
-                                "source_refs": ["audit_42", "table_42"]}],
+                            "chart_descriptions": [
+                                {
+                                    "relative_path": "charts/result.png",
+                                    "title": "图表",
+                                    "description": "统计总额",
+                                    "main_finding": "总额为 42",
+                                    "source_refs": ["audit_42", "table_42"],
+                                }
+                            ],
                             "purpose": "生成图表",
                         },
                         "type": "tool_call",
@@ -2381,14 +2396,23 @@ async def test_python_requires_reported_evidence_before_entering_sandbox() -> No
                         "args": {
                             "script": "print('chart')",
                             "output_paths": ["charts/result.png"],
-                            "chart_intents": [{
-                                "relative_path": "charts/result.png",
-                                "source_ref": "audit_42", "x_field": "total", "y_metric": "total",
-                            }],
-                            "chart_descriptions": [{
-                                "relative_path": "charts/result.png", "title": "图表",
-                                "description": "统计总额", "main_finding": "总额为 42",
-                                "source_refs": ["audit_42", "table_42"]}],
+                            "chart_intents": [
+                                {
+                                    "relative_path": "charts/result.png",
+                                    "source_ref": "audit_42",
+                                    "x_field": "total",
+                                    "y_metric": "total",
+                                }
+                            ],
+                            "chart_descriptions": [
+                                {
+                                    "relative_path": "charts/result.png",
+                                    "title": "图表",
+                                    "description": "统计总额",
+                                    "main_finding": "总额为 42",
+                                    "source_refs": ["audit_42", "table_42"],
+                                }
+                            ],
                             "purpose": "生成图表",
                             "deliverable_ids": ["P1"],
                         },
@@ -2591,20 +2615,33 @@ async def test_python_partial_registration_preserves_created_artifact_and_failur
                 tool_calls=[_tool_call("query_report", "SELECT amount AS total FROM sales")],
             ),
             _commit_call(),
-            AIMessage(content="", tool_calls=[{
-                "id": "write_reports", "name": "run_python", "type": "tool_call",
-                "args": {"script": "print('reports')", "purpose": "生成两份报告",
-                         "output_paths": ["report.md", "outputs/second.md"],
-                         "deliverable_ids": ["P1"]},
-            }]),
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "id": "write_reports",
+                        "name": "run_python",
+                        "type": "tool_call",
+                        "args": {
+                            "script": "print('reports')",
+                            "purpose": "生成两份报告",
+                            "output_paths": ["report.md", "outputs/second.md"],
+                            "deliverable_ids": ["P1"],
+                        },
+                    }
+                ],
+            ),
         ],
         [],
     )
     model.plan = MaterializedAnalysisPlan(
-        mode="ready", requirements=_materialized_plan("R1").requirements,
-        constraints=AnalysisExecutionConstraints(required_artifacts=[
-            {"kind": "markdown", "minimum_count": 2, "description": "两份报告"},
-        ]),
+        mode="ready",
+        requirements=_materialized_plan("R1").requirements,
+        constraints=AnalysisExecutionConstraints(
+            required_artifacts=[
+                {"kind": "markdown", "minimum_count": 2, "description": "两份报告"},
+            ]
+        ),
     )
 
     class Workspaces:
@@ -2620,17 +2657,24 @@ async def test_python_partial_registration_preserves_created_artifact_and_failur
             if request.relative_path == "outputs/second.md":
                 return AgentFailure(code=AgentErrorCode.ARTIFACT_REJECTED, message="输出被拒绝")
             return ArtifactRef(
-                artifact_id="registered_report", type="markdown", title="报告",
+                artifact_id="registered_report",
+                type="markdown",
+                title="报告",
                 source_tool_call_id=request.source_tool_call_id,
             )
 
     events = RecordingEvents()
     with pytest.raises(GraphRunError) as exc:
         await run_analysis_graph(
-            _context(), GraphDependencies(
-                model=model, gateway=FakeGateway([_sql_result(42)]),
-                workspace_id="workspace_1", workspaces=Workspaces(), sandbox=Sandbox(),
-                artifacts=Artifacts(), events=events,
+            _context(),
+            GraphDependencies(
+                model=model,
+                gateway=FakeGateway([_sql_result(42)]),
+                workspace_id="workspace_1",
+                workspaces=Workspaces(),
+                sandbox=Sandbox(),
+                artifacts=Artifacts(),
+                events=events,
             ),
         )
 
@@ -2638,14 +2682,21 @@ async def test_python_partial_registration_preserves_created_artifact_and_failur
     assert feedback[-1].summary["python_failure"]["outputs_created"] == ["report.md"]
     assert feedback[-1].summary["python_failure"]["paths_rejected"] == ["outputs/second.md"]
     assert feedback[-1].summary["python_failure"]["retryable"] is False
-    created = [event for event in events.events if event.type is RunEventType.ARTIFACT_CREATED
-               and event.payload["artifact_id"] == "registered_report"]
+    created = [
+        event
+        for event in events.events
+        if event.type is RunEventType.ARTIFACT_CREATED
+        and event.payload["artifact_id"] == "registered_report"
+    ]
     assert len(created) == 1
     failed = next(event for event in events.events if event.type is RunEventType.TOOL_FAILED)
     assert events.events.index(created[0]) < events.events.index(failed)
     assert json.loads(failed.payload["output_summary_json"])["output_count"] == 1
-    assert not any(event.type is RunEventType.TOOL_SUCCEEDED
-                   and event.payload["tool_call_id"] == "write_reports" for event in events.events)
+    assert not any(
+        event.type is RunEventType.TOOL_SUCCEEDED
+        and event.payload["tool_call_id"] == "write_reports"
+        for event in events.events
+    )
 
 
 @pytest.mark.asyncio
@@ -3200,26 +3251,70 @@ async def test_deliverable_budgets_stay_separate_and_ignore_renamed_paths() -> N
                 tool_calls=[_tool_call("query_report", "SELECT amount AS total FROM sales")],
             ),
             _commit_call(),
-            AIMessage(content="", tool_calls=[{
-                "id": "p1_fail", "name": "run_python", "type": "tool_call",
-                "args": {"script": script, "purpose": "第一份", "deliverable_ids": ["P1"],
-                         "output_paths": ["outputs/first.md"]},
-            }]),
-            AIMessage(content="", tool_calls=[{
-                "id": "p1_rename", "name": "run_python", "type": "tool_call",
-                "args": {"script": script, "purpose": "换个文件名", "deliverable_ids": ["P1"],
-                         "output_paths": ["outputs/renamed.md"]},
-            }]),
-            AIMessage(content="", tool_calls=[{
-                "id": "p1_fail_again", "name": "run_python", "type": "tool_call",
-                "args": {"script": "raise RuntimeError('different')", "purpose": "第一份",
-                         "deliverable_ids": ["P1"], "output_paths": ["outputs/first.md"]},
-            }]),
-            AIMessage(content="", tool_calls=[{
-                "id": "p2_ok", "name": "run_python", "type": "tool_call",
-                "args": {"script": "print('second')", "purpose": "第二份",
-                         "deliverable_ids": ["P2"], "output_paths": ["outputs/second.md"]},
-            }]),
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "id": "p1_fail",
+                        "name": "run_python",
+                        "type": "tool_call",
+                        "args": {
+                            "script": script,
+                            "purpose": "第一份",
+                            "deliverable_ids": ["P1"],
+                            "output_paths": ["outputs/first.md"],
+                        },
+                    }
+                ],
+            ),
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "id": "p1_rename",
+                        "name": "run_python",
+                        "type": "tool_call",
+                        "args": {
+                            "script": script,
+                            "purpose": "换个文件名",
+                            "deliverable_ids": ["P1"],
+                            "output_paths": ["outputs/renamed.md"],
+                        },
+                    }
+                ],
+            ),
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "id": "p1_fail_again",
+                        "name": "run_python",
+                        "type": "tool_call",
+                        "args": {
+                            "script": "raise RuntimeError('different')",
+                            "purpose": "第一份",
+                            "deliverable_ids": ["P1"],
+                            "output_paths": ["outputs/first.md"],
+                        },
+                    }
+                ],
+            ),
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "id": "p2_ok",
+                        "name": "run_python",
+                        "type": "tool_call",
+                        "args": {
+                            "script": "print('second')",
+                            "purpose": "第二份",
+                            "deliverable_ids": ["P2"],
+                            "output_paths": ["outputs/second.md"],
+                        },
+                    }
+                ],
+            ),
             AIMessage(content="第一份报告未能生成。"),
         ],
         [_answer("第二份报告已生成，第一份没有完成。", ["query_report"])],
@@ -3227,10 +3322,12 @@ async def test_deliverable_budgets_stay_separate_and_ignore_renamed_paths() -> N
     model.plan = MaterializedAnalysisPlan(
         mode="ready",
         requirements=_materialized_plan("R1").requirements,
-        constraints=AnalysisExecutionConstraints(required_artifacts=[
-            {"kind": "markdown", "minimum_count": 1, "description": "第一份报告"},
-            {"kind": "markdown", "minimum_count": 1, "description": "第二份报告"},
-        ]),
+        constraints=AnalysisExecutionConstraints(
+            required_artifacts=[
+                {"kind": "markdown", "minimum_count": 1, "description": "第一份报告"},
+                {"kind": "markdown", "minimum_count": 1, "description": "第二份报告"},
+            ]
+        ),
     )
 
     class Workspaces:
@@ -3245,20 +3342,26 @@ async def test_deliverable_budgets_stay_separate_and_ignore_renamed_paths() -> N
             self.paths.append(list(request.output_paths))
             if request.output_paths == ["outputs/second.md"]:
                 return SandboxExecutionResult(
-                    status=SandboxExecutionStatus.COMPLETED, elapsed_ms=1, exit_code=0,
+                    status=SandboxExecutionStatus.COMPLETED,
+                    elapsed_ms=1,
+                    exit_code=0,
                 )
             return SandboxExecutionResult(
                 status=SandboxExecutionStatus.FAILED,
                 elapsed_ms=1,
                 failure=AgentFailure(
-                    code=AgentErrorCode.SANDBOX_FAILED, message="脚本失败", retryable=True,
+                    code=AgentErrorCode.SANDBOX_FAILED,
+                    message="脚本失败",
+                    retryable=True,
                 ),
             )
 
     class Artifacts:
         async def register_file(self, request, _cancellation):
             return ArtifactRef(
-                artifact_id="markdown_second", type=AgentArtifactType.MARKDOWN, title="第二份",
+                artifact_id="markdown_second",
+                type=AgentArtifactType.MARKDOWN,
+                title="第二份",
                 source_tool_call_id=request.source_tool_call_id,
             )
 
@@ -3266,13 +3369,19 @@ async def test_deliverable_budgets_stay_separate_and_ignore_renamed_paths() -> N
     state = await run_analysis_graph(
         _context(),
         GraphDependencies(
-            model=model, gateway=FakeGateway([_sql_result(42)]), workspace_id="workspace_1",
-            workspaces=Workspaces(), sandbox=sandbox, artifacts=Artifacts(),
+            model=model,
+            gateway=FakeGateway([_sql_result(42)]),
+            workspace_id="workspace_1",
+            workspaces=Workspaces(),
+            sandbox=sandbox,
+            artifacts=Artifacts(),
         ),
     )
 
     assert sandbox.paths == [
-        ["outputs/first.md"], ["outputs/first.md"], ["outputs/second.md"],
+        ["outputs/first.md"],
+        ["outputs/first.md"],
+        ["outputs/second.md"],
     ]
     observations = [
         json.loads(str(message.content))
@@ -4490,7 +4599,7 @@ async def test_series_claim_commit_accepts_72_verified_dimension_values() -> Non
             id="R1.A1",
             requirement_id="R1",
             description="按分组统计数值",
-                claim_extractions=[
+            claim_extractions=[
                 {
                     "mode": "series",
                     "name": "bucket_total",
@@ -4550,7 +4659,7 @@ async def test_series_claim_commit_fills_omitted_verified_dimension_values() -> 
             id="R1.A1",
             requirement_id="R1",
             description="按分组统计数值",
-                claim_extractions=[
+            claim_extractions=[
                 {
                     "mode": "series",
                     "name": "bucket_total",
@@ -5089,8 +5198,9 @@ async def test_uncommitted_requirement_cannot_be_finalized_as_completed() -> Non
     assert state.outcome.evidence_refs == []
     assert state.outcome.answer == "结果已整理，但结论尚未提交。"
     final_snapshot = json.loads(model.final_messages[0][1].content)
-    assert not any(item["kind"] in {"table", "query_result"}
-                   for item in final_snapshot["materials"])
+    assert not any(
+        item["kind"] in {"table", "query_result"} for item in final_snapshot["materials"]
+    )
     assert "verified_evidence" not in final_snapshot
 
 
@@ -5119,8 +5229,9 @@ async def test_claim_timeout_keeps_verified_values_in_partial_answer() -> None:
     assert state.outcome.incomplete_reason == "ANALYSIS_CLAIM_COMMIT_TIMEOUT"
     assert state.outcome.evidence_refs == []
     final_snapshot = json.loads(model.final_messages[0][1].content)
-    assert not any(item["kind"] in {"table", "query_result"}
-                   for item in final_snapshot["materials"])
+    assert not any(
+        item["kind"] in {"table", "query_result"} for item in final_snapshot["materials"]
+    )
     assert "verified_evidence" not in final_snapshot
 
 
@@ -5600,9 +5711,7 @@ async def test_commit_reports_numeric_difference_without_type_annotation() -> No
     feedback = json.loads(commit_messages[0].content)["summary"]
     assert "42" in feedback["expected"], "期望侧必须给出已验证取值"
     assert "41" in feedback["submitted"], "实际侧必须给出本次提交取值"
-    assert (
-        "类型不匹配" not in feedback["expected"]
-    ), "可归一配对的数值差异不得标注为类型不匹配"
+    assert "类型不匹配" not in feedback["expected"], "可归一配对的数值差异不得标注为类型不匹配"
 
 
 @pytest.mark.asyncio
@@ -5641,9 +5750,7 @@ async def test_commit_accepts_decimal_string_verified_value_against_numeric_subm
 
     state = await run_analysis_graph(
         _context(),
-        GraphDependencies(
-            model=model, gateway=FakeGateway([_sql_result("4.1962")]), events=events
-        ),
+        GraphDependencies(model=model, gateway=FakeGateway([_sql_result("4.1962")]), events=events),
     )
 
     assert state.outcome.completion_kind == "completed"
@@ -5653,9 +5760,9 @@ async def test_commit_accepts_decimal_string_verified_value_against_numeric_subm
         if event.type is RunEventType.TOOL_SUCCEEDED
         and event.payload.get("tool_name") == "commit_analysis_claims"
     ], "归一成功的配对必须以提交成功收尾"
-    assert not [
-        event for event in events.events if event.type is RunEventType.TOOL_FAILED
-    ], "归一成功路径不得再产生值不匹配反馈"
+    assert not [event for event in events.events if event.type is RunEventType.TOOL_FAILED], (
+        "归一成功路径不得再产生值不匹配反馈"
+    )
     assert len(state.outcome.claim_audits) == 1
     assert state.outcome.claim_audits[0].facts[0].value == "4.1962"
 
@@ -5693,9 +5800,7 @@ async def test_commit_accepts_numeric_verified_value_against_decimal_string_subm
 
     state = await run_analysis_graph(
         _context(),
-        GraphDependencies(
-            model=model, gateway=FakeGateway([_sql_result(4.1962)]), events=events
-        ),
+        GraphDependencies(model=model, gateway=FakeGateway([_sql_result(4.1962)]), events=events),
     )
 
     assert state.outcome.completion_kind == "completed"
@@ -5705,9 +5810,9 @@ async def test_commit_accepts_numeric_verified_value_against_decimal_string_subm
         if event.type is RunEventType.TOOL_SUCCEEDED
         and event.payload.get("tool_name") == "commit_analysis_claims"
     ], "归一成功的配对必须以提交成功收尾"
-    assert not [
-        event for event in events.events if event.type is RunEventType.TOOL_FAILED
-    ], "归一成功路径不得再产生值不匹配反馈"
+    assert not [event for event in events.events if event.type is RunEventType.TOOL_FAILED], (
+        "归一成功路径不得再产生值不匹配反馈"
+    )
     assert len(state.outcome.claim_audits) == 1
     assert state.outcome.claim_audits[0].facts[0].value == 4.1962
 
@@ -5758,15 +5863,13 @@ async def test_decimal_string_evidence_row_survives_final_answer_material_admiss
 
     state = await run_analysis_graph(
         _context(),
-        GraphDependencies(
-            model=model, gateway=FakeGateway([_sql_result("4.1962")]), events=events
-        ),
+        GraphDependencies(model=model, gateway=FakeGateway([_sql_result("4.1962")]), events=events),
     )
 
     assert state.outcome.completion_kind == "completed"
-    assert not [
-        event for event in events.events if event.type is RunEventType.TOOL_FAILED
-    ], "归一后的提交不得再产生值反馈失败"
+    assert not [event for event in events.events if event.type is RunEventType.TOOL_FAILED], (
+        "归一后的提交不得再产生值反馈失败"
+    )
     # 提交通过后的记录值是核验表示（字符串 '4.1962'），不再是提交表示。
     assert state.outcome.claim_audits[0].facts[0].value == expected_recorded_value
     # 三道闸门命中：query_result 材料存在且证据行（字符串单元格 '4.1962'）在列。
@@ -5844,8 +5947,9 @@ def test_chart_sources_admit_only_claim_values_recorded_in_verified_representati
     """材料准入边界：记录值必须是核验表示，提交表示不得误准入相邻数值行。
 
     提交校验通过后 reported_claims 的记录值已是核验表示（图级回归覆盖）；
-    这里固化 answer_materials 侧的不变量：数字记录值与字符串证据单元格
-    失配时整个 attempt 被踢出准入，verified_values 投影与图表来源为空。
+    这里固化 answer_materials 侧的不变量：准入匹配与提交校验一样按 canonical
+    decimal 归一（Gateway 把 MySQL DECIMAL 序列化为字符串），仅限表示差异，
+    不能凭容差相近的相邻数值通过；verified_values 投影保持核验原值表示。
     """
 
     assertion = _materialized_plan("R1").requirements[0].assertions[0]
@@ -5871,7 +5975,7 @@ def test_chart_sources_admit_only_claim_values_recorded_in_verified_representati
         artifact_id="table_decimal",
     )
 
-    for recorded_value, admitted in (("4.1962", True), (4.1962, False)):
+    for recorded_value in ("4.1962", 4.1962):
         claim = AnalysisReportedClaim(
             id="C1",
             requirement_id="R1",
@@ -5880,21 +5984,150 @@ def test_chart_sources_admit_only_claim_values_recorded_in_verified_representati
             values=[{"name": "total", "value": recorded_value, "fact_key": "total"}],
         )
         admitted_attempts = admitted_query_attempts([attempt], [binding], [claim])
-        assert bool(admitted_attempts) is admitted, "记录值失配时整个 attempt 必须被踢出准入"
-        projection = admitted_attempts[0].verified_values if admitted_attempts else []
-        assert [(value.name, value.value) for value in projection] == (
-            [("total", "4.1962")] if admitted else []
-        ), "verified_values 投影必须与核验原值精确一致"
-        assert available_chart_sources(admitted_attempts) == (
-            [{
+        assert admitted_attempts, "与核验值数值归一相等的记录值必须准入"
+        projection = admitted_attempts[0].verified_values
+        assert [(value.name, value.value) for value in projection] == [("total", "4.1962")], (
+            "verified_values 投影必须与核验原值精确一致"
+        )
+        assert available_chart_sources(admitted_attempts) == [
+            {
                 "source_refs": ["audit_decimal", "table_decimal"],
                 "fields": ["total"],
-                "numeric_fields": [],
+                "numeric_fields": ["total"],
                 "row_count": 1,
-            }]
-            if admitted
-            else []
+            }
+        ]
+
+    for stray_value in (4.196, "4.196", "007", "4.1962x", None):
+        claim = AnalysisReportedClaim(
+            id="C1",
+            requirement_id="R1",
+            claim="平均评分为 4.1962。",
+            evidence_binding_ids=["E1"],
+            values=[{"name": "total", "value": stray_value, "fact_key": "total"}],
         )
+        assert admitted_query_attempts([attempt], [binding], [claim]) == [], (
+            f"非 canonical 等值记录值 {stray_value!r} 不得准入"
+        )
+
+
+def test_chart_sources_treat_gateway_decimal_strings_as_numeric_for_charts() -> None:
+    """MySQL SUM(DECIMAL) 被 Gateway 序列化为字符串，金额列必须仍可作图表 y 轴。
+
+    提交校验按 canonical decimal 归一接受字符串金额（graph 侧 q17 教训）；
+    图表准入与 build_chart_spec 必须一致：numeric_fields 含金额列，
+    ChartSpec 的 metric_min/max 为 float，recorded 表示与核验表示可归一。
+    """
+
+    assertion = AnalysisAssertion(
+        id="R1.A1",
+        requirement_id="R1",
+        description="按会员等级汇总已完成订单消费总额",
+        source_tables=["customers", "orders", "order_items"],
+        dimensions=["member_tier"],
+        result_columns=["member_tier", "total_amount"],
+        claim_extractions=[
+            {
+                "mode": "series",
+                "name": "tier_amount",
+                "value_field": "total_amount",
+                "dimension_fields": ["member_tier"],
+                "unit": "元",
+                "required": True,
+                "max_items": 10,
+            }
+        ],
+    )
+    attempt = AnalysisQueryAttempt(
+        id="Q1",
+        requirement_ids=["R1"],
+        valid=True,
+        assertions=[assertion],
+        audit_log_id="audit_money",
+        artifact_id="table_money",
+        safe_result=TableDataRead(
+            columns=["member_tier", "total_amount"],
+            rows=[["普通会员", "22387162.21"], ["钻石会员", "1655644.17"]],
+            row_count=2,
+        ),
+        verified_values=[
+            AnalysisVerifiedValue(
+                assertion_id="R1.A1",
+                name="tier_amount",
+                value="22387162.21",
+                unit="元",
+                fact_key="total_amount|member_tier=普通会员",
+                dimensions={"member_tier": "普通会员"},
+            ),
+            AnalysisVerifiedValue(
+                assertion_id="R1.A1",
+                name="tier_amount",
+                value="1655644.17",
+                unit="元",
+                fact_key="total_amount|member_tier=钻石会员",
+                dimensions={"member_tier": "钻石会员"},
+            ),
+        ],
+    )
+    binding = AnalysisEvidenceBinding(
+        id="E1",
+        requirement_id="R1",
+        query_attempt_id="Q1",
+        audit_log_id="audit_money",
+        artifact_id="table_money",
+    )
+    claim = AnalysisReportedClaim(
+        id="C1",
+        requirement_id="R1",
+        claim="普通会员消费总额最高。",
+        evidence_binding_ids=["E1"],
+        values=[
+            {
+                "name": "tier_amount",
+                "value": "22387162.21",
+                "unit": "元",
+                "fact_key": "total_amount|member_tier=普通会员",
+                "dimensions": {"member_tier": "普通会员"},
+            },
+            {
+                "name": "tier_amount",
+                "value": 1655644.17,
+                "unit": "元",
+                "fact_key": "total_amount|member_tier=钻石会员",
+                "dimensions": {"member_tier": "钻石会员"},
+            },
+        ],
+    )
+
+    admitted = admitted_query_attempts([attempt], [binding], [claim])
+    assert len(admitted) == 1, "字符串与数值两种 recorded 表示都必须准入"
+    assert [(value.name, value.value) for value in admitted[0].verified_values] == [
+        ("tier_amount", "22387162.21"),
+        ("tier_amount", "1655644.17"),
+    ]
+    assert available_chart_sources(admitted) == [
+        {
+            "source_refs": ["audit_money", "table_money"],
+            "fields": ["member_tier", "total_amount"],
+            "numeric_fields": ["total_amount"],
+            "row_count": 2,
+        }
+    ]
+
+    spec = build_chart_spec(
+        ChartIntent(
+            relative_path="charts/money.png",
+            source_ref="audit_money",
+            x_field="member_tier",
+            y_metric="total_amount",
+            sort="desc",
+        ),
+        admitted[0],
+    )
+    assert spec.row_count == 2
+    assert spec.verified_columns == ["member_tier", "total_amount"]
+    assert spec.metric_min == pytest.approx(1655644.17)
+    assert spec.metric_max == pytest.approx(22387162.21)
 
 
 @pytest.mark.asyncio
@@ -5948,8 +6181,7 @@ async def test_commit_reports_value_type_mismatch_in_feedback() -> None:
     assert "ANALYSIS_CLAIM_VALUE_MISMATCH:R1:total" in commit_messages[0].content
     feedback = json.loads(commit_messages[0].content)["summary"]
     assert (
-        "类型不匹配：期望字符串 '007'，实际提交数字 7；请按期望的类型提交"
-        in feedback["expected"]
+        "类型不匹配：期望字符串 '007'，实际提交数字 7；请按期望的类型提交" in feedback["expected"]
     ), "类型差异必须显式标注而不是仅靠引号暗示"
     assert "fact_key=" in feedback["expected"], "原有期望字段对照必须保留"
     assert "7" in feedback["submitted"], "实际侧必须给出本次提交取值"
@@ -6162,8 +6394,9 @@ async def test_commit_stage_timeout_is_not_reported_as_run_timeout() -> None:
     assert state.outcome.incomplete_reason == "ANALYSIS_CLAIM_COMMIT_TIMEOUT"
     assert state.outcome.answer == "已有查询结果，但提交阶段未能完成。"
     final_snapshot = json.loads(model.final_messages[0][1].content)
-    assert not any(item["kind"] in {"table", "query_result"}
-                   for item in final_snapshot["materials"])
+    assert not any(
+        item["kind"] in {"table", "query_result"} for item in final_snapshot["materials"]
+    )
     assert "verified_evidence" not in final_snapshot
 
 
@@ -6937,22 +7170,43 @@ async def test_final_answer_fact_mismatch_exhausted_marks_partial() -> None:
 def _admitted_chart_state() -> dict:
     assertion = _materialized_plan("R1").requirements[0].assertions[0]
     return {
-        "query_attempts": [AnalysisQueryAttempt(
-            id="Q1", requirement_ids=["R1"], valid=True, assertions=[assertion],
-            audit_log_id="audit_42", artifact_id="table_42",
-            safe_result=_sql_result(42).result,
-            verified_values=[AnalysisVerifiedValue(
-                assertion_id="R1.A1", name="total", value=42, fact_key="total",
-            )],
-        )],
-        "evidence_bindings": [AnalysisEvidenceBinding(
-            id="E1", requirement_id="R1", query_attempt_id="Q1",
-            audit_log_id="audit_42", artifact_id="table_42",
-        )],
-        "reported_claims": [AnalysisReportedClaim(
-            id="C1", requirement_id="R1", claim="总额为42", evidence_binding_ids=["E1"],
-            values=[{"name": "total", "value": 42, "fact_key": "total"}],
-        )],
+        "query_attempts": [
+            AnalysisQueryAttempt(
+                id="Q1",
+                requirement_ids=["R1"],
+                valid=True,
+                assertions=[assertion],
+                audit_log_id="audit_42",
+                artifact_id="table_42",
+                safe_result=_sql_result(42).result,
+                verified_values=[
+                    AnalysisVerifiedValue(
+                        assertion_id="R1.A1",
+                        name="total",
+                        value=42,
+                        fact_key="total",
+                    )
+                ],
+            )
+        ],
+        "evidence_bindings": [
+            AnalysisEvidenceBinding(
+                id="E1",
+                requirement_id="R1",
+                query_attempt_id="Q1",
+                audit_log_id="audit_42",
+                artifact_id="table_42",
+            )
+        ],
+        "reported_claims": [
+            AnalysisReportedClaim(
+                id="C1",
+                requirement_id="R1",
+                claim="总额为42",
+                evidence_binding_ids=["E1"],
+                values=[{"name": "total", "value": 42, "fact_key": "total"}],
+            )
+        ],
     }
 
 
@@ -6962,29 +7216,44 @@ def test_chart_sources_survive_without_any_tool_history_and_require_claim_admiss
     state["requirements"] = [
         _materialized_plan("R1").requirements[0].model_copy(update={"status": "reported"})
     ]
-    scope = _AnalysisScope(artifact_requirements=AnalysisExecutionConstraints(
-        required_artifacts=[{"kind": "chart", "minimum_count": 1, "description": "图表"}],
-    ).required_artifacts)
+    scope = _AnalysisScope(
+        artifact_requirements=AnalysisExecutionConstraints(
+            required_artifacts=[{"kind": "chart", "minimum_count": 1, "description": "图表"}],
+        ).required_artifacts
+    )
     for admitted in (True, False):
         if not admitted:
             state["reported_claims"] = []
         build = _build_agent_working_set(
-            state, context=_context(), scope=scope, model_context=None,
+            state,
+            context=_context(),
+            scope=scope,
+            model_context=None,
             stage="context_retry",
         )
         payload = json.loads(str(build.messages[1].content).split("\n")[-1])
         assert payload["verified_values"][0]["value"] == 42
-        assert payload["available_chart_sources"] == ([{
-            "source_refs": ["audit_42", "table_42"], "fields": ["total"],
-            "numeric_fields": ["total"], "row_count": 1,
-        }] if admitted else [])
+        assert payload["available_chart_sources"] == (
+            [
+                {
+                    "source_refs": ["audit_42", "table_42"],
+                    "fields": ["total"],
+                    "numeric_fields": ["total"],
+                    "row_count": 1,
+                }
+            ]
+            if admitted
+            else []
+        )
 
 
 def test_chart_source_context_is_budgeted_and_never_silently_dropped() -> None:
     projection = AgentWorkingSetProjection(question="图表", current_requirement_ids=[])
     with pytest.raises(RuntimeError, match="Working Set"):
         _fit_agent_working_set_projection(
-            projection, 4000, chart_sources=[{"fields": ["x" * 5000]}],
+            projection,
+            4000,
+            chart_sources=[{"fields": ["x" * 5000]}],
         )
 
 
@@ -6994,13 +7263,20 @@ def test_claim_binding_map_survives_without_tool_history() -> None:
     state["requirements"] = list(_materialized_plan("R1").requirements)
     state["reported_claims"] = []
     build = _build_agent_working_set(
-        state, context=_context(), scope=_AnalysisScope(), model_context=None,
+        state,
+        context=_context(),
+        scope=_AnalysisScope(),
+        model_context=None,
         stage="context_retry",
     )
     payload = json.loads(str(build.messages[1].content).split("\n")[-1])
-    assert payload["available_claim_evidence"] == [{
-        "evidence_binding_id": "E1", "requirement_id": "R1", "assertion_ids": ["R1.A1"],
-    }]
+    assert payload["available_claim_evidence"] == [
+        {
+            "evidence_binding_id": "E1",
+            "requirement_id": "R1",
+            "assertion_ids": ["R1.A1"],
+        }
+    ]
     assert payload["available_chart_sources"] == []
 
 
@@ -7013,21 +7289,31 @@ async def test_multi_claim_commit_rejected_with_per_requirement_diff() -> None:
         commit.tool_calls[0]["args"]["claims"] *= 2
         return commit
 
-    model = FakeModel([
-        AIMessage(
-            content="", tool_calls=[_tool_call("query", "SELECT amount AS total FROM sales")],
-        ),
-        multi_claim_commit("multi_commit"),
-        _commit_call(values=[{"name": "total", "value": 42, "unit": None}]),
-    ], [_answer("总额为42。")])
-    state = await run_analysis_graph(
-        _context(), GraphDependencies(model=model, gateway=FakeGateway([_sql_result(42)]),
-                                      plan=_materialized_plan("R1")),
+    model = FakeModel(
+        [
+            AIMessage(
+                content="",
+                tool_calls=[_tool_call("query", "SELECT amount AS total FROM sales")],
+            ),
+            multi_claim_commit("multi_commit"),
+            _commit_call(values=[{"name": "total", "value": 42, "unit": None}]),
+        ],
+        [_answer("总额为42。")],
     )
-    failures = [json.loads(str(message.content))["summary"]
-                for messages in model.agent_messages for message in messages
-                if isinstance(message, ToolMessage) and message.name == "commit_analysis_claims"
-                and "ANALYSIS_COMMIT_MULTI_CLAIMS" in str(message.content)]
+    state = await run_analysis_graph(
+        _context(),
+        GraphDependencies(
+            model=model, gateway=FakeGateway([_sql_result(42)]), plan=_materialized_plan("R1")
+        ),
+    )
+    failures = [
+        json.loads(str(message.content))["summary"]
+        for messages in model.agent_messages
+        for message in messages
+        if isinstance(message, ToolMessage)
+        and message.name == "commit_analysis_claims"
+        and "ANALYSIS_COMMIT_MULTI_CLAIMS" in str(message.content)
+    ]
     assert failures
     finding = failures[-1]["validation_findings"][0]
     assert finding["code"] == "ANALYSIS_COMMIT_MULTI_CLAIMS"
@@ -7051,7 +7337,8 @@ async def test_multi_claim_commit_counts_toward_retry_budget() -> None:
     model = FakeModel(
         [
             AIMessage(
-                content="", tool_calls=[_tool_call("query", "SELECT amount AS total FROM sales")],
+                content="",
+                tool_calls=[_tool_call("query", "SELECT amount AS total FROM sales")],
             ),
             multi_claim_commit("multi_commit_1"),
             multi_claim_commit("multi_commit_2"),
@@ -7102,15 +7389,18 @@ async def test_single_claim_commit_succeeds_with_omitted_evidence_bindings() -> 
     model = FakeModel(
         [
             AIMessage(
-                content="", tool_calls=[_tool_call("query", "SELECT amount AS total FROM sales")],
+                content="",
+                tool_calls=[_tool_call("query", "SELECT amount AS total FROM sales")],
             ),
             commit,
         ],
         [_answer("客户总量为 42。")],
     )
     state = await run_analysis_graph(
-        _context(), GraphDependencies(model=model, gateway=FakeGateway([_sql_result(42)]),
-                                      plan=_materialized_plan("R1")),
+        _context(),
+        GraphDependencies(
+            model=model, gateway=FakeGateway([_sql_result(42)]), plan=_materialized_plan("R1")
+        ),
     )
 
     assert state.outcome.completion_kind == "completed"
@@ -7148,15 +7438,18 @@ async def test_already_reported_commit_feedback_shows_prior_claim_summary() -> N
         [_answer("两个目标均已提交。")],
     )
     state = await run_analysis_graph(
-        _context(), GraphDependencies(model=model, gateway=FakeGateway([_sql_result(42)]),
-                                      plan=_materialized_plan("R1", "R2")),
+        _context(),
+        GraphDependencies(
+            model=model, gateway=FakeGateway([_sql_result(42)]), plan=_materialized_plan("R1", "R2")
+        ),
     )
 
     rejections = [
         json.loads(str(message.content))["summary"]
         for messages in model.agent_messages
         for message in messages
-        if isinstance(message, ToolMessage) and message.name == "commit_analysis_claims"
+        if isinstance(message, ToolMessage)
+        and message.name == "commit_analysis_claims"
         and "ANALYSIS_REQUIREMENT_ALREADY_REPORTED" in str(message.content)
     ]
     assert len(rejections) == 1
@@ -7168,25 +7461,40 @@ async def test_already_reported_commit_feedback_shows_prior_claim_summary() -> N
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("invalid_kind,field,choices", [
-    ("description", "chart_descriptions[0].source_refs", ["audit_42", "table_42"]),
-    ("intent_source", "chart_intents[0].source_ref", ["audit_42", "table_42"]),
-    ("intent_field", "chart_intents[0].y_metric", ["total"]),
-    ("missing_intent", "chart_intents", ["charts/result.png"]),
-])
+@pytest.mark.parametrize(
+    "invalid_kind,field,choices",
+    [
+        ("description", "chart_descriptions[0].source_refs", ["audit_42", "table_42"]),
+        ("intent_source", "chart_intents[0].source_ref", ["audit_42", "table_42"]),
+        ("intent_field", "chart_intents[0].y_metric", ["total"]),
+        ("missing_intent", "chart_intents", ["charts/result.png"]),
+    ],
+)
 async def test_chart_validation_identifies_field_and_allowed_choices(invalid_kind, field, choices):
     arguments = {
-        "script": "print('not executed')", "output_paths": ["charts/result.png"],
-        "purpose": "图表", "deliverable_ids": ["P1"], "chart_intents": [{
-            "relative_path": "charts/result.png", "source_ref": "audit_42",
-            "x_field": "total", "y_metric": "total",
-        }],
+        "script": "print('not executed')",
+        "output_paths": ["charts/result.png"],
+        "purpose": "图表",
+        "deliverable_ids": ["P1"],
+        "chart_intents": [
+            {
+                "relative_path": "charts/result.png",
+                "source_ref": "audit_42",
+                "x_field": "total",
+                "y_metric": "total",
+            }
+        ],
     }
     if invalid_kind == "description":
-        arguments["chart_descriptions"] = [{
-            "relative_path": "charts/result.png", "title": "图表", "description": "总额",
-            "main_finding": "总额", "source_refs": ["E1"],
-        }]
+        arguments["chart_descriptions"] = [
+            {
+                "relative_path": "charts/result.png",
+                "title": "图表",
+                "description": "总额",
+                "main_finding": "总额",
+                "source_refs": ["E1"],
+            }
+        ]
     elif invalid_kind == "intent_source":
         arguments["chart_intents"][0]["source_ref"] = "R1.A1"
     elif invalid_kind == "intent_field":
@@ -7194,11 +7502,20 @@ async def test_chart_validation_identifies_field_and_allowed_choices(invalid_kin
     else:
         arguments["chart_intents"] = []
     observation, artifacts, _ = await _execute_python(
-        _context(), GraphDependencies(
-            model=object(), gateway=object(), workspace_id="workspace_1",
-            workspaces=object(), sandbox=object(), artifacts=object(),
-        ), _NeverCanceled(), "chart", arguments,
-        allowed_source_refs=["audit_42", "table_42"], **_admitted_chart_state(),
+        _context(),
+        GraphDependencies(
+            model=object(),
+            gateway=object(),
+            workspace_id="workspace_1",
+            workspaces=object(),
+            sandbox=object(),
+            artifacts=object(),
+        ),
+        _NeverCanceled(),
+        "chart",
+        arguments,
+        allowed_source_refs=["audit_42", "table_42"],
+        **_admitted_chart_state(),
     )
     assert observation.status == "failed"
     assert artifacts == []
@@ -7739,8 +8056,10 @@ async def test_context_only_schema_sources_keep_datalink_when_graph_exists() -> 
     snapshot = _final_answer_snapshot(model)
     relationships = [
         json.loads(line)["relationships"]
-        for material in snapshot["materials"] if material["kind"] == "relationship"
-        for line in material["content"].splitlines() if "relationships" in json.loads(line)
+        for material in snapshot["materials"]
+        if material["kind"] == "relationship"
+        for line in material["content"].splitlines()
+        if "relationships" in json.loads(line)
     ]
     assert any(item["edge_type"] == "foreign_key" for item in relationships)
 
@@ -7774,8 +8093,12 @@ async def test_context_only_datalink_explore_reaches_final_answer_snapshot() -> 
     assert state.outcome.answer == "订单通过 customer_id 关联客户。"
     assert state.outcome.completion_kind == "completed"
     snapshot = _final_answer_snapshot(model)
-    semantic = [json.loads(line) for material in snapshot["materials"]
-                if material["kind"] == "relationship" for line in material["content"].splitlines()]
+    semantic = [
+        json.loads(line)
+        for material in snapshot["materials"]
+        if material["kind"] == "relationship"
+        for line in material["content"].splitlines()
+    ]
     assert any("join_paths" in item for item in semantic)
     assert any(item.get("relationships", {}).get("edge_type") == "foreign_key" for item in semantic)
     assert "private-customer-value" not in json.dumps(snapshot, ensure_ascii=False)

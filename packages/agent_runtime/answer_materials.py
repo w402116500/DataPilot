@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import json
 import math
+import re
 from collections.abc import Iterable, Sequence
+from decimal import Decimal, InvalidOperation
 
 from contracts.answer_materials import AnswerMaterial, AnswerMaterialSource, ChartIntent, ChartSpec
 from contracts.datalink import DataLinkSemanticContext
@@ -19,6 +21,40 @@ from agent_runtime.contracts import (
     analysis_fact_key,
 )
 
+# 与 graph.py 提交校验（_claim_values_numeric_comparable）保持同一 canonical 形状：
+# Gateway 会把 MySQL DECIMAL 序列化为字符串（serialization.py），准入判定必须与
+# 提交校验一样按数值归一，否则提交通过的金额字段永远无法进入图表。
+_DECIMAL_PATTERN = re.compile(r"-?(0|[1-9]\d*)(\.\d+)?")
+
+
+def _as_number(value: object) -> Decimal | None:
+    """canonical 数值（含 DECIMAL 字符串表示）→ Decimal；其余返回 None。"""
+
+    if isinstance(value, bool) or value is None:
+        return None
+    if isinstance(value, int):
+        return Decimal(value)
+    if isinstance(value, float):
+        return Decimal(str(value)) if math.isfinite(value) else None
+    if isinstance(value, str):
+        text = value.strip()
+        if not _DECIMAL_PATTERN.fullmatch(text):
+            return None
+        try:
+            return Decimal(text)
+        except InvalidOperation:
+            return None
+    return None
+
+
+def _same_fact_value(left: object, right: object) -> bool:
+    """严格相等，或两边都可按 canonical decimal 归一且数值精确相等。"""
+
+    if left == right:
+        return True
+    left_number, right_number = _as_number(left), _as_number(right)
+    return left_number is not None and right_number is not None and left_number == right_number
+
 
 def admitted_query_attempts(
     attempts: Sequence[AnalysisQueryAttempt],
@@ -31,13 +67,23 @@ def admitted_query_attempts(
         if not attempt.valid:
             continue
         binding_ids = {item.id for item in bindings if item.query_attempt_id == attempt.id}
-        admitted = [value for claim in claims
-                    if binding_ids.intersection(claim.evidence_binding_ids)
-                    for value in claim.values]
-        verified = [value for value in attempt.verified_values if any(
-            value.name == claim.name and value.fact_key == claim.fact_key
-            and value.value == claim.value and value.dimensions == claim.dimensions
-            for claim in admitted)]
+        admitted = [
+            value
+            for claim in claims
+            if binding_ids.intersection(claim.evidence_binding_ids)
+            for value in claim.values
+        ]
+        verified = [
+            value
+            for value in attempt.verified_values
+            if any(
+                value.name == claim.name
+                and value.fact_key == claim.fact_key
+                and _same_fact_value(value.value, claim.value)
+                and value.dimensions == claim.dimensions
+                for claim in admitted
+            )
+        ]
         if verified:
             result.append(attempt.model_copy(update={"verified_values": verified}))
     return result
@@ -47,21 +93,27 @@ def available_chart_sources(attempts: Sequence[AnalysisQueryAttempt]) -> list[di
     """List admitted reference choices and columns without exposing unsubmitted rows."""
     sources = []
     for attempt in attempts:
-        values = [AnalysisClaimValue.model_validate(
-            value.model_dump(exclude={"assertion_id", "tolerance"})
-        ) for value in attempt.verified_values]
+        values = [
+            AnalysisClaimValue.model_validate(
+                value.model_dump(exclude={"assertion_id", "tolerance"})
+            )
+            for value in attempt.verified_values
+        ]
         units = submitted_result_units(attempt, values)
         if not units:
             continue
         fields = sorted(set.intersection(*(set(unit) for unit in units)))
-        numeric = [field for field in fields if all(
-            isinstance(unit[field], (int, float)) and not isinstance(unit[field], bool)
-            and math.isfinite(unit[field]) for unit in units
-        )]
-        sources.append({
-            "source_refs": [ref for ref in (attempt.audit_log_id, attempt.artifact_id) if ref],
-            "fields": fields, "numeric_fields": numeric, "row_count": len(units),
-        })
+        numeric = [
+            field for field in fields if all(_as_number(unit[field]) is not None for unit in units)
+        ]
+        sources.append(
+            {
+                "source_refs": [ref for ref in (attempt.audit_log_id, attempt.artifact_id) if ref],
+                "fields": fields,
+                "numeric_fields": numeric,
+                "row_count": len(units),
+            }
+        )
     return sources
 
 
@@ -137,8 +189,15 @@ def number_materials(materials: Sequence[AnswerMaterial]) -> tuple[AnswerMateria
     result: list[AnswerMaterial] = []
     seen: set[str] = set()
     priority = {
-        "query_result": 0, "table": 0, "chart_spec": 1, "schema": 2,
-        "relationship": 3, "file": 4, "chart": 4, "markdown": 4, "warning": 5,
+        "query_result": 0,
+        "table": 0,
+        "chart_spec": 1,
+        "schema": 2,
+        "relationship": 3,
+        "file": 4,
+        "chart": 4,
+        "markdown": 4,
+        "warning": 5,
     }
     for material in sorted(materials, key=lambda item: priority[item.kind]):
         key = material.model_dump_json(exclude={"number"})
@@ -171,12 +230,12 @@ def build_chart_spec(
         fields.add(intent.group_by)
     if not units or any(not fields.issubset(unit) for unit in units):
         raise ValueError("CHART_FIELDS_UNVERIFIED")
-    metrics = [unit[intent.y_metric] for unit in units]
-    if any(
-        isinstance(value, bool) or not isinstance(value, (int, float))
-        or not math.isfinite(value) for value in metrics
-    ):
-        raise ValueError("CHART_METRIC_NOT_NUMERIC")
+    metrics: list[float] = []
+    for unit in units:
+        metric = _as_number(unit[intent.y_metric])
+        if metric is None:
+            raise ValueError("CHART_METRIC_NOT_NUMERIC")
+        metrics.append(float(metric))
     returned_count = attempt.safe_result.row_count if attempt.safe_result else len(units)
     dimensions = {
         field: len({json.dumps(unit[field], ensure_ascii=False) for unit in units})
